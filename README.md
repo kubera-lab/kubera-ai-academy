@@ -1,0 +1,72 @@
+# KUBERA AI Academy
+
+Free, self-paced AI courses for adult beginners. Every lesson ends with a task that is **checked automatically by fixed rules** — real SQL runs in the browser, real JavaScript runs against hidden tests. No account, no paid AI service, no tracking.
+
+**Principle:** LEARN → BUILD → TEST → VERIFY → PORTFOLIO.
+
+## What is in v1.0
+
+| # | Course | Units | Lab |
+|---|---|---|---|
+| 1 | AI Fundamentals | 4 | Is AI the right tool? (decisions with written evidence) |
+| 2 | Prompt Engineering | 4 | System prompt for a bike repair shop (6 required + 4 quality checks) |
+| 3 | Build Your First AI Assistant | 5 modules + final project | Offline assistant, knowledge validator, test runner, control tests, export |
+| 4 | AI Agents and Automation | 4 | Permission guard in JavaScript (visible + hidden tests) |
+| 5 | Data Quality with AI | 4 | Property record matching with evidence |
+| 6 | SQL and Data Analytics | 4 | Duplicate detection in SQLite (visible + hidden dataset) |
+| 7 | GIS and Official Open Data | 4 | Nearest-place finder with haversine distance |
+| 8 | AI-Assisted Web Development | 4 | Listing filter for a small app |
+
+33 learning units in total (28 lessons + 5 modules), plus the course 3 final project.
+
+Platform features: course catalogue, interactive lessons, labs, knowledge checks, project builder, test runner, progress tracking, learning history, search, portfolio export (Markdown), progress backup/restore (JSON), English and Russian interface.
+
+## How results are decided
+
+- Multiple choice and labelling: fixed answer keys. The explanation for a wrong answer appears after the second attempt, so guessing is not rewarded.
+- Written evidence: must be a real sentence (6+ words, real words, not repeated) that names the compared field or the risk.
+- JavaScript labs: code runs for real in a disposable Web Worker (2-second limit, no network or storage APIs) against visible and hidden tests.
+- SQL labs: queries run in SQLite compiled to WebAssembly ([sql.js](https://github.com/sql-js/sql.js), MIT) on a visible and a hidden dataset; hard-coded answers fail. Only one read query (SELECT/WITH) is allowed.
+- A pass belongs to the exact answer and content version that were graded. Editing passed work removes the pass until it is checked again.
+- Tasks that cannot be judged objectively are marked "needs human review" and are never counted as passed.
+- No AI model decides any result.
+
+## AI tutor
+
+Not connected. `functions/api/tutor.ts` is a Cloudflare Pages Function that documents the future interface and returns `501 not_configured`. No API keys are stored in the browser and no fake AI replies are shown.
+
+## Run locally
+
+```bash
+npm ci
+npm run dev              # development server
+npx tsc --noEmit         # type check
+npx --yes tsx --test src/data/*.test.ts   # content and integration tests
+npm test                 # all unit + integration tests
+npm run build            # production build into dist/
+npx vite preview --port 4173 &  npm run e2e   # Playwright end-to-end tests against the build
+```
+
+## Project structure
+
+```
+src/content/        course content (data only), sources and research register
+src/engine/         deterministic graders: grade.ts, lint.ts, assistant.ts, testing.ts, project.ts, portfolio.ts
+src/runtime/        sql.js loader and Web Worker code runner
+src/ui/, src/pages/ React components
+src/i18n/           en.ts and ru.ts (a test fails if a Russian key is missing)
+src/data/           course 3 content, Russian text, and integration tests
+e2e/run.ts          Playwright walkthrough of every lesson, a11y (axe-core), mobile, keyboard, export
+functions/api/      tutor interface stub for Cloudflare Pages
+```
+
+## Sources
+
+Each lesson lists its sources with the date they were checked (2026-11-16) and their licence. Lessons explain ideas in their own words; no third-party lesson text is copied. Ideas taken from other platforms (for example separate knowledge and practical scores, hidden tests, automatically evaluated final projects) are listed with their licences on the in-app **Sources** page.
+
+## Limitations
+
+- Progress is stored only in the learner's browser (backup file available); no accounts, no sync, no certificates.
+- Checkers use fixed rules; they cannot fully understand meaning.
+- The course 3 practice assistants and the prompt checker work in English.
+- Example organisations, addresses, UPRNs and prices are fictional or synthetic.
