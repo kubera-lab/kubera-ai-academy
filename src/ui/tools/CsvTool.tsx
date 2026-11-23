@@ -76,7 +76,7 @@ export default function CsvTool({ lang, answer: saved, onAnswer, onGraded }: { l
       <Editor id="csv-editor" label={lang === 'ru' ? `CSV (${fileName}) — исправляйте прямо здесь` : `CSV (${fileName}) — fix it right here`} value={answer} onChange={onAnswer} rows={14} />
       <div className="row">
         <button className="primary" onClick={() => setShown(true)}>{tr(COMMON.audit, lang)}</button>
-        {!own && <button onClick={() => { setShown(true); onGraded(toGrade(lab.checks, answer)); }}>{tr(COMMON.check, lang)}</button>}
+        {!own && <button onClick={() => { setShown(true); onAnswer(answer); onGraded(toGrade(lab.checks, answer)); }}>{tr(COMMON.check, lang)}</button>}
       </div>
       {shown && (
         <section aria-live="polite" data-testid="csv-results">

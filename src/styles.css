@@ -223,3 +223,14 @@ input[type='search'], .field input { width: 100%; }
 .glossary dt { font-weight: 600; }
 .glossary dd { margin: 0; color: var(--muted); }
 @media (max-width: 560px) { .glossary { grid-template-columns: 1fr; } .glossary dd { margin-bottom: 8px; } }
+.trace { list-style: none; padding: 0; display: grid; gap: 8px; }
+.tstep { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; display: grid; gap: 4px; }
+.tstep.observation { background: var(--panel-2); margin-left: 18px; }
+.tstep.message { border-color: var(--violet); }
+.tstep select { width: auto; max-width: 100%; }
+.tstep { min-width: 0; }
+.tstep .mono { overflow-wrap: anywhere; word-break: break-word; }
+.tstep label { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tool pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.trace { grid-template-columns: minmax(0, 1fr); }
+.tstep select { width: 100%; min-width: 0; }

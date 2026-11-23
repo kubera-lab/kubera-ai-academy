@@ -31,7 +31,7 @@ export interface ChoiceQ {
   why: L;
 }
 
-export type ToolId = 'csv' | 'sqlreport' | 'geojson' | 'web';
+export type ToolId = 'csv' | 'sqlreport' | 'geojson' | 'web' | 'safety' | 'abtest' | 'trace';
 
 export type Exercise =
   /** warmup: explanations are shown right after the first check (practice before the lab). */

@@ -98,7 +98,7 @@ export default function GeoTool({ lang, answer: saved, onAnswer, onGraded }: { l
       <Editor id="geo-editor" label={lang === 'ru' ? `GeoJSON (${fileName}) — исправляйте прямо здесь` : `GeoJSON (${fileName}) — fix it right here`} value={answer} onChange={onAnswer} rows={14} />
       <div className="row">
         <button className="primary" onClick={() => setShown(true)}>{tr(COMMON.audit, lang)}</button>
-        {!own && <button onClick={() => { setShown(true); onGraded(toGrade(lab.checks, answer)); }}>{tr(COMMON.check, lang)}</button>}
+        {!own && <button onClick={() => { setShown(true); onAnswer(answer); onGraded(toGrade(lab.checks, answer)); }}>{tr(COMMON.check, lang)}</button>}
         {shown && certain > 0 && (
           <button onClick={() => { const r = applyCertainSwaps(answer); onAnswer(r.text); setMsg(lang === 'ru' ? `Поменяно позиций: ${r.swapped}. Возможные (неточные) случаи не тронуты.` : `Swapped ${r.swapped} position(s). Possible (uncertain) cases were left alone.`); }}>
             {lang === 'ru' ? `Поменять точные случаи (${certain})` : `Swap certain cases (${certain})`}

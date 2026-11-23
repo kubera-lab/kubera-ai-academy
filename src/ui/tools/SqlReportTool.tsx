@@ -36,7 +36,7 @@ function Table({ r }: { r: SqlResult }) {
   );
 }
 
-export default function SqlReportTool({ lang, answer, onAnswer, onGraded }: { lang: Lang; answer: SqlReportAnswer; onAnswer: (a: SqlReportAnswer) => void; onGraded: (r: GradeResult) => void }) {
+export default function SqlReportTool({ lang, answer, onAnswer, onGraded }: { lang: Lang; answer: SqlReportAnswer | null; onAnswer: (a: SqlReportAnswer) => void; onGraded: (r: GradeResult) => void }) {
   const a: SqlReportAnswer = { ...emptyReport(), ...answer, queries: { ...emptyReport().queries, ...(answer?.queries ?? {}) } };
   const [out, setOut] = useState<Record<string, { result?: SqlResult; error?: string; reasons: string[]; passed: boolean } | undefined>>({});
   const [busy, setBusy] = useState(false);
@@ -115,7 +115,7 @@ sales (sale_id PK, home_id FK → homes.home_id, sale_date, price)`}</pre>
         <textarea id="rep-note" rows={3} value={a.note} onChange={(e) => onAnswer({ ...a, note: e.target.value })} />
       </div>
       <div className="row">
-        <button className="primary" disabled={busy} onClick={async () => { const e = await runAll(); if (e) onGraded(toGrade(e.map((x) => ({ id: x.task.id, ok: x.passed })), a)); }}>{tr(COMMON.check, lang)}</button>
+        <button className="primary" disabled={busy} onClick={async () => { const e = await runAll(); if (e) { onAnswer(a); onGraded(toGrade(e.map((x) => ({ id: x.task.id, ok: x.passed })), a)); } }}>{tr(COMMON.check, lang)}</button>
         <button disabled={busy} onClick={async () => { const e = await runAll(); if (e) save(safeName(a.title, 'sql-report') + '.sql', buildSqlFile(e, a.title, new Date()), 'application/sql'); }}>{lang === 'ru' ? 'Скачать .sql' : 'Download .sql'}</button>
         <button disabled={busy} onClick={async () => { const e = await runAll(); if (e) save(safeName(a.title, 'sql-report') + '.md', buildSqlMarkdown(e, a.title, a.note, new Date()), 'text/markdown'); }}>{lang === 'ru' ? 'Скачать отчёт .md' : 'Download report .md'}</button>
       </div>

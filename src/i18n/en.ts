@@ -27,7 +27,7 @@ export const en: Record<string, string> = {
   'course.estimate': 'about {h} hours (estimate)',
   'course.outcome': 'Outcome',
   'course.open': 'Open course',
-  'course.c3.title': 'Build Your First AI Assistant',
+  'course.c3.title': 'AI Assistant Building & Debugging',
   'course.c3.level': 'Beginner',
   'course.c3.outcome': 'A tested assistant on your own subject, exported for GitHub.',
   'course.other': 'AI Fundamentals;Prompt Engineering;AI Agents and Automation;Data Quality with AI;SQL and Data Analytics;GIS and Official Open Data;AI-Assisted Web Development',

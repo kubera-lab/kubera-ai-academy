@@ -86,7 +86,7 @@ export default function WebTool({ lang, answer: saved, onAnswer, onGraded }: { l
       <Editor id="web-editor" label={lang === 'ru' ? `HTML (${fileName}) — исправляйте прямо здесь` : `HTML (${fileName}) — fix it right here`} value={answer} onChange={onAnswer} rows={16} />
       <div className="row">
         <button className="primary" onClick={() => setShown(true)}>{tr(COMMON.audit, lang)}</button>
-        {!own && <button onClick={() => { setShown(true); onGraded(toGrade(lab.checks, answer)); }}>{tr(COMMON.check, lang)}</button>}
+        {!own && <button onClick={() => { setShown(true); onAnswer(answer); onGraded(toGrade(lab.checks, answer)); }}>{tr(COMMON.check, lang)}</button>}
       </div>
       {shown && (
         <section aria-live="polite" data-testid="web-results">

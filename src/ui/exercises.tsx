@@ -18,6 +18,9 @@ const CsvTool = lazy(() => import('./tools/CsvTool.tsx'));
 const GeoTool = lazy(() => import('./tools/GeoTool.tsx'));
 const WebTool = lazy(() => import('./tools/WebTool.tsx'));
 const SqlReportTool = lazy(() => import('./tools/SqlReportTool.tsx'));
+const SafetyTool = lazy(() => import('./tools/SafetyTool.tsx'));
+const AbTool = lazy(() => import('./tools/AbTool.tsx'));
+const TraceTool = lazy(() => import('./tools/TraceTool.tsx'));
 
 export interface ExerciseProps {
   lesson: Lesson;
@@ -87,6 +90,9 @@ function ToolEx({ ex, lang, progress, onAnswer, onGraded, lesson }: P<'tool'>) {
         {ex.tool === 'geojson' && <GeoTool {...common} answer={answer as string | null} onAnswer={onAnswer} />}
         {ex.tool === 'web' && <WebTool {...common} answer={answer as string | null} onAnswer={onAnswer} />}
         {ex.tool === 'sqlreport' && <SqlReportTool {...common} answer={answer as never} onAnswer={onAnswer} />}
+        {ex.tool === 'safety' && <SafetyTool {...common} answer={answer as never} onAnswer={onAnswer} />}
+        {ex.tool === 'abtest' && <AbTool {...common} answer={answer as never} onAnswer={onAnswer} />}
+        {ex.tool === 'trace' && <TraceTool {...common} answer={answer as never} onAnswer={onAnswer} />}
       </Suspense>
       <ResultBar p={progress} version={lesson.v} />
     </div>

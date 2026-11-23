@@ -8,6 +8,8 @@ import { COURSES, ALL_LESSONS } from '../src/content/catalog.ts';
 import { MODULES, RIVERSIDE_INSTRUCTIONS, SPOT_ITEMS } from '../src/data/course.ts';
 import { REPORT_TASKS } from '../src/engine/tools/sqlreport.ts';
 import { CSV_FIXED, GEO_FIXED, HTML_FIXED } from './solutions.ts';
+import { CASES, SAFEGUARDS, assess } from '../src/engine/tools/safety.ts';
+import { PRACTICE_POLICY, PRACTICE_TRACE, expectedVerdicts, parseTrace, type Trace } from '../src/engine/tools/trace.ts';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:4173/';
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -64,7 +66,24 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
     await p.getByRole('button', { name: 'Run the checks' }).click();
   } else if (ex.kind === 'tool') {
     await p.getByTestId('tool-' + ex.tool).waitFor({ timeout: 8000 });
-    if (ex.tool === 'sqlreport') {
+    if (ex.tool === 'safety') {
+      if (mode === 'right') {
+        const opts = { affects: ['none', 'minor', 'significant'], data: ['none', 'personal', 'sensitive'], mode: ['assist', 'human_approves', 'automatic'], impact: ['low', 'medium', 'high'] } as const;
+        for (const c of CASES) {
+          const card = p.getByTestId('card-' + c.id);
+          for (const k of Object.keys(opts) as (keyof typeof opts)[]) await card.locator(`input[name="${c.id}-${k}"]`).nth((opts[k] as readonly string[]).indexOf(c.key[k])).check();
+          const need = assess({ title: c.title, ...c.key, safeguards: [] }).required;
+          for (const sg of need) await card.locator('input[type=checkbox]').nth(SAFEGUARDS.indexOf(sg)).check();
+        }
+      }
+    } else if (ex.tool === 'abtest') {
+      await p.locator('#ab-b').fill(mode === 'right' ? GOOD_PROMPT : 'You are a helpful assistant for a bike shop.');
+    } else if (ex.tool === 'trace') {
+      if (mode === 'right') {
+        const exp = expectedVerdicts(parseTrace(PRACTICE_TRACE) as Trace, PRACTICE_POLICY);
+        for (const [step, rules] of Object.entries(exp)) await p.getByLabel(`Diagnosis for step ${step}`, { exact: true }).selectOption(rules.length ? rules[0] : 'ok');
+      }
+    } else if (ex.tool === 'sqlreport') {
       for (const t of REPORT_TASKS) await p.locator('#rep-q-' + t.id).fill(mode === 'right' ? t.reference : "SELECT 'x'");
     } else {
       const fixed = ex.tool === 'csv' ? CSV_FIXED : ex.tool === 'geojson' ? GEO_FIXED : HTML_FIXED;
@@ -77,7 +96,8 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
 }
 
 (async () => {
-  const b = await chromium.launch();
+  // PW_CHANNEL=chrome lets the test use an installed Chrome (kept from the local Windows copy).
+  const b = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   const p = await ctx.newPage();
   const errs: string[] = [];
@@ -195,6 +215,19 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   await p.getByRole('button', { name: 'Check the lab' }).click();
   check('Web: fixed page passes', (await status(p)).startsWith('Passed'));
 
+  await go('l/fund-final');
+  const sfd = await dlText('Download cards .md');
+  check('Safety: cards .md downloads with risk levels', /Risk: HIGH/.test(sfd.text) && /not legal advice/.test(sfd.text));
+  await go('l/prompt-final');
+  check('A/B: winner shown by the same rules', (await p.getByText('Winner: B').count()) === 1);
+  const abmd = await dlText('Download A/B report .md');
+  check('A/B: report says no AI model scored the prompts', /\*\*Winner: B\*\*/.test(abmd.text) && /no AI model scored them/.test(abmd.text));
+  await go('l/agents-final');
+  await p.getByRole('button', { name: "Step 2. Show the debugger's findings" }).click();
+  check('Trace: injection found on step 5', (await p.getByTestId('trace-results').innerText()).includes('Followed instructions hidden in content'));
+  const trd = await dlText('Download review .md');
+  check('Trace: review .md downloads', /\| 15 \| Claims something that did not happen/.test(trd.text));
+
   await go('c/dq');
   await p.getByText(/Glossary \(\d+ terms\)/).click();
   check('course page: glossary opens with terms', (await p.locator('.glossary dt').count()) >= 4);
@@ -254,7 +287,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   // ---------- dashboard, reload ----------
   await go('dashboard');
   const tiles = async () => (await p.locator('.tiles .tile b').allTextContents()).join(',');
-  const all = '5 / 5,5 / 5,5 / 5,5 / 5,6 / 6,6 / 6,6 / 6,6 / 6';
+  const all = '6 / 6,6 / 6,5 / 5,6 / 6,6 / 6,6 / 6,6 / 6,6 / 6';
   check('dashboard: every course complete', (await tiles()) === all, await tiles());
   check('learning history recorded', (await p.locator('table.results tbody tr').count()) >= 30);
   await p.reload(); await p.waitForTimeout(200);
@@ -268,7 +301,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   const backupPath = (await bk.path())!;
   await p.getByRole('button', { name: 'Reset all progress' }).click();
   await p.getByRole('button', { name: 'Delete everything' }).click();
-  check('reset clears progress', (await tiles()).startsWith('0 / 5'), await tiles());
+  check('reset clears progress', (await tiles()).startsWith('0 / 6'), await tiles());
   await p.locator('label.filebtn input[type=file]').setInputFiles(backupPath);
   await p.waitForTimeout(300);
   check('backup restores progress', (await tiles()) === all, await tiles());
@@ -281,7 +314,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   const englishUi = ['Check answers', 'Sources & further reading', 'Run tests', 'Lesson passed', 'Dashboard', 'Courses', 'Your SQL query', 'Run on practice data'];
   const body = await p.locator('body').innerText();
   check('no untranslated UI labels on a Russian lesson page', englishUi.every((s) => !body.includes(s)), englishUi.filter((s) => body.includes(s)).join(', '));
-  for (const h of ['home', 'courses', 'dashboard', 'about', 'search', 'm2', 'project', 'l/agents-2', 'l/dq-4', 'l/web-4', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'c/gis']) {
+  for (const h of ['home', 'courses', 'dashboard', 'about', 'search', 'm2', 'project', 'l/agents-2', 'l/dq-4', 'l/web-4', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'l/fund-final', 'l/prompt-final', 'l/agents-final', 'c/gis']) {
     await go(h);
     const txt = await p.locator('body').innerText();
     const leaks = ['Check answers', 'Run tests', 'Learning history', 'Knowledge check', 'Final project', 'Lesson ', 'Try again', 'Open course'].filter((s) => txt.includes(s));
@@ -292,6 +325,8 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   // ---------- keyboard only ----------
   const k = await ctx.newPage();
   await k.goto(BASE + '#home');
+  await k.locator('a.skip').waitFor({ state: 'attached' });
+  await k.locator('article.ccard').first().waitFor();
   await k.keyboard.press('Tab');
   check('first Tab focuses the skip link', (await k.evaluate(() => document.activeElement?.className)) === 'skip');
   await k.goto(BASE + '#l/agents-1');
@@ -317,7 +352,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
 
   // ---------- accessibility (axe-core) ----------
   const axeSrc = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
-  for (const h of ['home', 'courses', 'c/sql', 'l/fund-2', 'l/agents-2', 'l/sql-3', 'l/gis-4', 'l/prompt-4', 'l/dq-4', 'l/dq-w', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'm3', 'project', 'dashboard', 'search', 'about']) {
+  for (const h of ['home', 'courses', 'c/sql', 'l/fund-2', 'l/agents-2', 'l/sql-3', 'l/gis-4', 'l/prompt-4', 'l/dq-4', 'l/dq-w', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'l/fund-final', 'l/prompt-final', 'l/agents-final', 'm3', 'project', 'dashboard', 'search', 'about']) {
     await p.goto(BASE + '#' + h); await p.waitForTimeout(150);
     if (/-final$/.test(h)) await p.locator('.tool').waitFor({ timeout: 8000 });
     await p.addScriptTag({ content: axeSrc });
@@ -331,7 +366,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   // ---------- mobile 390 px ----------
   const m = await b.newPage({ viewport: { width: 390, height: 844 } });
   m.on('pageerror', (e) => errs.push('mobile ' + e.message));
-  for (const h of ['home', 'courses', 'l/sql-2', 'l/gis-4', 'l/dq-4', 'l/agents-2', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'c/web', 'm3', 'project', 'dashboard', 'about']) {
+  for (const h of ['home', 'courses', 'l/sql-2', 'l/gis-4', 'l/dq-4', 'l/agents-2', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'l/fund-final', 'l/prompt-final', 'l/agents-final', 'c/web', 'm3', 'project', 'dashboard', 'about']) {
     await m.goto(BASE + '#' + h); await m.waitForTimeout(150);
     if (/-final$/.test(h)) await m.locator('.tool').waitFor({ timeout: 8000 });
     const sw = await m.evaluate(() => document.documentElement.scrollWidth);

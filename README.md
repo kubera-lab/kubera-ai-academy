@@ -17,14 +17,18 @@ Free, self-paced AI courses for adult beginners. Every lesson ends with a task t
 | 7 | GIS and Official Open Data | 4 | Nearest-place finder with haversine distance |
 | 8 | AI-Assisted Web Development | 4 | Listing filter for a small app |
 
-44 learning units in total (39 lessons + 5 modules), plus the course 3 final project.
+47 learning units in total (42 lessons + 5 modules), plus the course 3 final project.
 
-### New in v1.1 — beginner standard and four final-project tools
+### New in v1.1 — beginner standard and a final-project tool in every course
 
-Every course now has a bilingual **glossary** (EN/RU) for absolute beginners and a **warm-up** before the lab that explains each answer straight away. Courses 5–8 end with a real working tool:
+Every course now has a bilingual **glossary** (EN/RU) for absolute beginners and a **warm-up** before the lab that explains each answer straight away, and ends with a real working tool:
 
 | Course | Final-project tool | What it really does | Exports |
 |---|---|---|---|
+| 1 · AI Fundamentals & Safety | **AI Use-Case Safety Review** | Risk card from four questions (who is affected, data, who decides, impact) → risk level and required safeguards by fixed rules; three graded cases + the learner's own | cards `.md` |
+| 2 · Prompt Engineering & A/B Testing | **Prompt A/B Tester** | Two prompt versions checked by the same rulebook (6 required + 4 quality checks); optional pasted model replies graded by fixed rules; no built-in model | report `.md`, `.json` |
+| 3 · AI Assistant Building & Debugging | Own assistant project (unchanged) | Offline assistant, knowledge validator, test runner, control tests | project files |
+| 4 · AI Agents, Permissions & Trace Debugging | **Agent Trace Debugger** | Reads an agent's action log against a permission policy: forbidden tools, missing approval, external recipients, prompt injection followed, loops, missing results, false claims; learner diagnoses first | review `.md`, `.json` |
 | 5 | **CSV Data Quality Auditor** | Parses CSV (quotes, commas, CRLF), checks required fields, duplicates, calendar dates, numbers, UK postcodes and conflicts between sources; shows line, record, column, value and fix; deterministic score | report `.md`, `.json`, fixed `.csv` |
 | 6 | **SQL Report Builder** | Five queries (SELECT, WHERE, JOIN, GROUP BY, aggregate) on three related tables in real SQLite (sql.js); visible + hidden dataset; plain-language SQL errors; read-only practice database | `.sql`, report `.md` with real results |
 | 7 | **GeoJSON Coordinate Validator** | RFC 7946 structure, ranges, NaN/text/missing values, lines and closed rings; certain lat/lon swaps can be fixed by a button, ambiguous ones are warnings only; map preview | `.geojson`, report `.json`, `.md` |
@@ -74,6 +78,10 @@ src/data/           course 3 content, Russian text, and integration tests
 e2e/run.ts          Playwright walkthrough of every lesson, a11y (axe-core), mobile, keyboard, export
 functions/api/      tutor interface stub for Cloudflare Pages
 ```
+
+## Deploy (free)
+
+`.github/workflows/deploy.yml` checks, builds, runs the end-to-end tests and publishes `dist/` to the Cloudflare Pages project **kubera-ai-academy** (free plan) on every push to `main`. It needs one repository secret, `CLOUDFLARE_API_TOKEN`; without it the job still checks and builds and skips publishing. No paid service is required: all courses work without any AI API, and the tutor function stays a 501 stub.
 
 ## Sources
 
