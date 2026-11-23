@@ -205,3 +205,21 @@ input[type='search'], .field input { width: 100%; }
   .results { font-size: 0.85em; }
   .order li { flex-direction: column; align-items: stretch; }
 }
+
+/* ---------- course tools (5–8) and glossary ---------- */
+.tool h3 { margin-top: 18px; }
+.tool .good { color: var(--good); }
+.tbl td.mono, .tbl .mono { font-family: var(--mono); font-size: 13px; word-break: break-all; }
+.tbl tr.warnrow td { color: var(--warn); }
+.geomap { margin: 12px 0; }
+.geomap svg { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; display: block; }
+.geobg { fill: var(--panel-2); }
+.geook { fill: var(--good); stroke: var(--good); }
+.geobad { fill: var(--bad); stroke: var(--bad); }
+.geoline { fill: none; stroke-width: 3; }
+.geopoly { fill-opacity: .25; stroke-width: 2; }
+.webpreview { width: 100%; height: 260px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.glossary { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 6px 16px; margin: 8px 0 0; }
+.glossary dt { font-weight: 600; }
+.glossary dd { margin: 0; color: var(--muted); }
+@media (max-width: 560px) { .glossary { grid-template-columns: 1fr; } .glossary dd { margin-bottom: 8px; } }

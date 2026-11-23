@@ -8,7 +8,7 @@
     "wasm": "node -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm','public/sql-wasm.wasm')\"",
     "prebuild": "npm run wasm",
     "build": "vite build",
-    "test": "tsx --test src/engine/*.test.ts src/data/*.test.ts",
+    "test": "tsx --test src/engine/*.test.ts src/engine/tools/*.test.ts src/data/*.test.ts",
     "e2e": "tsx e2e/run.ts"
   },
   "dependencies": {
