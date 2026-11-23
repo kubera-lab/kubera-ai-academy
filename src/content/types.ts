@@ -9,7 +9,7 @@ export interface L {
 export const tx = (v: L, lang: Lang) => v[lang] || v.en;
 
 /** Content version. Bump a lesson's `v` when its exercise changes: older passes for it stop counting. */
-export const CONTENT_VERSION = '1.0.0';
+export const CONTENT_VERSION = '1.1.0';
 export const CHECKED = '2026-11-16';
 
 export interface Source {
@@ -31,8 +31,11 @@ export interface ChoiceQ {
   why: L;
 }
 
+export type ToolId = 'csv' | 'sqlreport' | 'geojson' | 'web';
+
 export type Exercise =
-  | { kind: 'choice'; questions: ChoiceQ[] }
+  /** warmup: explanations are shown right after the first check (practice before the lab). */
+  | { kind: 'choice'; questions: ChoiceQ[]; warmup?: boolean }
   | {
       kind: 'classify';
       intro: L;
@@ -54,7 +57,9 @@ export type Exercise =
     }
   | { kind: 'code'; task: L; fnName: string; starter: string; tests: (CodeTest & { label: L })[]; reference: string; hint: L }
   | { kind: 'prompt'; task: L; subject: string; starter: string }
-  | { kind: 'manual'; task: L; checklist: L[]; minWords: number };
+  | { kind: 'manual'; task: L; checklist: L[]; minWords: number }
+  /** A full practical tool (course final project): audit, fix, re-check and export. */
+  | { kind: 'tool'; tool: ToolId; task: L };
 
 export interface Lesson {
   id: string;
@@ -79,5 +84,7 @@ export interface Course {
   outcome: L;
   /** The original course with its own pages (m1–m5 + project). */
   legacy?: boolean;
+  /** Key terms for absolute beginners, in English and Russian. */
+  glossary?: { term: L; def: L }[];
   lessons: Lesson[];
 }

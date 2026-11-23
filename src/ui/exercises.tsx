@@ -1,17 +1,23 @@
 // Interactive exercises for the generic lessons. Grading is in src/engine/grade.ts (pure, unit-tested).
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { t, tReason } from '../i18n/index.ts';
 import { tx, type Exercise, type Lang, type Lesson } from '../content/types.ts';
 import {
   gradeChoice, gradeClassify, gradeCodeRuns, gradeManual, gradeNumeric, gradeOrder, gradeSql, hashOf,
-  type ClassifyAnswer, type CodeRun, type GradeResult, type SqlResult, type SqlRunner,
+  type ClassifyAnswer, type CodeRun, type GradeResult, type SqlResult,
 } from '../engine/grade.ts';
 import { lintInstructions } from '../engine/lint.ts';
 import { subjectTerms } from '../engine/project.ts';
-import { loadSql, makeRunner } from '../runtime/sql.ts';
+import { getRunner } from '../runtime/sqlRunner.ts';
 import { runInWorker } from '../runtime/code.ts';
 import type { LessonProgress } from '../state.ts';
 import { CheckList, Status } from './parts.tsx';
+
+// Course tools load only when their lesson opens (separate bundles).
+const CsvTool = lazy(() => import('./tools/CsvTool.tsx'));
+const GeoTool = lazy(() => import('./tools/GeoTool.tsx'));
+const WebTool = lazy(() => import('./tools/WebTool.tsx'));
+const SqlReportTool = lazy(() => import('./tools/SqlReportTool.tsx'));
 
 export interface ExerciseProps {
   lesson: Lesson;
@@ -29,6 +35,8 @@ export function initialAnswer(ex: Exercise): unknown {
     case 'sql': return ex.starter;
     case 'code': return ex.starter;
     case 'prompt': return ex.starter;
+    // null = the tool starts from its own practice file (tools and their data load lazily).
+    case 'tool': return null;
     default: return '';
   }
 }
@@ -63,7 +71,26 @@ export function ExerciseView(props: ExerciseProps) {
     case 'code': return <CodeEx {...props} ex={ex} />;
     case 'prompt': return <PromptEx {...props} ex={ex} />;
     case 'manual': return <ManualEx {...props} ex={ex} />;
+    case 'tool': return <ToolEx {...props} ex={ex} />;
   }
+}
+
+// ---------- course tools (final projects of courses 5–8) ----------
+function ToolEx({ ex, lang, progress, onAnswer, onGraded, lesson }: P<'tool'>) {
+  const answer = progress?.answer ?? initialAnswer(ex);
+  const common = { lang, onGraded };
+  return (
+    <div>
+      <p><b>{tx(ex.task, lang)}</b></p>
+      <Suspense fallback={<p className="small muted" role="status">{lang === 'ru' ? 'Загрузка инструмента…' : 'Loading the tool…'}</p>}>
+        {ex.tool === 'csv' && <CsvTool {...common} answer={answer as string | null} onAnswer={onAnswer} />}
+        {ex.tool === 'geojson' && <GeoTool {...common} answer={answer as string | null} onAnswer={onAnswer} />}
+        {ex.tool === 'web' && <WebTool {...common} answer={answer as string | null} onAnswer={onAnswer} />}
+        {ex.tool === 'sqlreport' && <SqlReportTool {...common} answer={answer as never} onAnswer={onAnswer} />}
+      </Suspense>
+      <ResultBar p={progress} version={lesson.v} />
+    </div>
+  );
 }
 
 type P<K extends Exercise['kind']> = ExerciseProps & { ex: Extract<Exercise, { kind: K }> };
@@ -72,7 +99,8 @@ type P<K extends Exercise['kind']> = ExerciseProps & { ex: Extract<Exercise, { k
 function ChoiceEx({ ex, lang, progress, onAnswer, onGraded, lesson }: P<'choice'>) {
   const ans = (progress?.answer ?? {}) as Record<string, number>;
   const shown = fresh(progress, lesson.v);
-  const reveal = (progress?.attempts ?? 0) >= 2;
+  // Warm-ups explain every answer right away; graded quizzes wait for a second attempt.
+  const reveal = ex.warmup || (progress?.attempts ?? 0) >= 2;
   return (
     <div>
       {ex.questions.map((q, qi) => {
@@ -203,8 +231,6 @@ function NumericEx({ ex, lang, progress, onAnswer, onGraded, lesson }: P<'numeri
 }
 
 // ---------- SQL (real SQLite in the browser) ----------
-let runnerPromise: Promise<SqlRunner> | null = null;
-const getRunner = () => (runnerPromise ??= loadSql(new URL('sql-wasm.wasm', document.baseURI).href).then(makeRunner));
 
 function ResultTable({ r }: { r: SqlResult }) {
   if (!r.columns.length) return <p className="small muted">{t('sql.noRows')}</p>;

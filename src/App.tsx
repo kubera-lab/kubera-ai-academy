@@ -1,3 +1,4 @@
+import { Glossary } from './ui/Glossary.tsx';
 import { useEffect, useMemo, useState } from 'react';
 import { getLang, setLang, t } from './i18n/index.ts';
 import { useAppState, storageAvailable, lessonPassed, lessonStale, withHistory, parseSaved, type AppState } from './state.ts';
@@ -182,6 +183,7 @@ function CoursePage({ course, state }: { course: Course; state: AppState }) {
       <h1>{course.n}. {tx(course.title, lang)}</h1>
       <p className="lead">{tx(course.summary, lang)}</p>
       <p><b>{t('course.outcome')}:</b> {tx(course.outcome, lang)}</p>
+      <Glossary items={course.glossary} lang={lang} />
       <ol className="modlist">
         {course.lessons.map((l, i) => {
           const p = state.lessons[l.id];

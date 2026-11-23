@@ -1,3 +1,5 @@
+import { Glossary } from '../ui/Glossary.tsx';
+import { GLOSSARY } from '../content/extras.ts';
 import { useEffect, useMemo, useState } from 'react';
 import { getLang, t } from '../i18n/index.ts';
 import { RIVERSIDE, RIVERSIDE_INSTRUCTIONS, RIVERSIDE_TESTS, SPOT_ITEMS, TEMPLATES, brokenRiverside, type ModuleDef, type ModuleId } from '../data/course.ts';
@@ -43,6 +45,7 @@ export function LegacyCourse({ state }: { state: AppState }) {
       <p className="eyebrow">{t('course.c3.level')} · {t('course.lessons', { n: 5 })}</p>
       <h1>{t('course.c3.title')}</h1>
       <p className="lead">{t('course.c3.outcome')}</p>
+      <Glossary items={GLOSSARY.assistant} lang={state.lang} />
       <ol className="modlist">
         {mods().map((m) => {
           const p = state.modules[m.id];

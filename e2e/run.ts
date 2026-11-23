@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { COURSES, ALL_LESSONS } from '../src/content/catalog.ts';
 import { MODULES, RIVERSIDE_INSTRUCTIONS, SPOT_ITEMS } from '../src/data/course.ts';
+import { REPORT_TASKS } from '../src/engine/tools/sqlreport.ts';
+import { CSV_FIXED, GEO_FIXED, HTML_FIXED } from './solutions.ts';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:4173/';
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -60,6 +62,16 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   } else if (ex.kind === 'prompt') {
     await p.getByLabel('Your instructions').fill(mode === 'right' ? GOOD_PROMPT : STUFFED);
     await p.getByRole('button', { name: 'Run the checks' }).click();
+  } else if (ex.kind === 'tool') {
+    await p.getByTestId('tool-' + ex.tool).waitFor({ timeout: 8000 });
+    if (ex.tool === 'sqlreport') {
+      for (const t of REPORT_TASKS) await p.locator('#rep-q-' + t.id).fill(mode === 'right' ? t.reference : "SELECT 'x'");
+    } else {
+      const fixed = ex.tool === 'csv' ? CSV_FIXED : ex.tool === 'geojson' ? GEO_FIXED : HTML_FIXED;
+      await p.getByRole('button', { name: 'Reset to the practice file' }).click();
+      if (mode === 'right') await p.locator('.tool textarea').first().fill(fixed);
+    }
+    await p.getByRole('button', { name: 'Check the lab' }).click();
   }
   return status(p);
 }
@@ -71,7 +83,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   const errs: string[] = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
-  const go = async (h: string) => { await p.goto(BASE + '#' + h); await p.waitForTimeout(120); };
+  const go = async (h: string) => { await p.goto(BASE + '#' + h); await p.waitForTimeout(120); if (/-final$/.test(h)) await p.locator('.tool').waitFor({ timeout: 8000 }); };
 
   await go('home');
   check('home shows 8 course cards', (await p.locator('article.ccard').count()) === 8);
@@ -117,6 +129,75 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   check('course page shows the change', (await p.getByText('changed since last check').count()) > 0);
   await go('l/sql-1');
   await answerLesson(p, 'sql-1', 'right');
+
+  // ---------- course tools: exports, safety, honesty ----------
+  const dlText = async (name: string) => { const [d] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name }).click()]); return { file: d.suggestedFilename(), text: readFileSync((await d.path())!, 'utf8') }; };
+  await go('l/dq-final');
+  await p.getByTestId('tool-csv').waitFor();
+  await p.getByRole('button', { name: 'Reset to the practice file' }).click();
+  await p.getByRole('button', { name: 'Run the audit' }).click();
+  check('CSV: practice file shows 8 findings with line numbers', (await p.locator('[data-testid=csv-results] tbody tr').count()) === 8);
+  const cmd = await dlText('Download report .md');
+  check('CSV: .md report downloads with findings', cmd.file.endsWith('-quality-report.md') && /\| 5 \| P03 \|/.test(cmd.text) && /does not prove every value is true/.test(cmd.text), cmd.file);
+  const cjs = await dlText('Download report .json');
+  check('CSV: .json report is valid JSON with 8 findings', JSON.parse(cjs.text).findings.length === 8);
+  await p.locator('.tool textarea').first().fill(CSV_FIXED);
+  const ccsv = await dlText('Download fixed .csv');
+  check('CSV: fixed .csv downloads exactly as edited', ccsv.text === CSV_FIXED);
+  await p.reload(); await p.getByTestId('tool-csv').waitFor();
+  check('CSV: edited file survives reload', (await p.locator('.tool textarea').first().inputValue()) === CSV_FIXED);
+  await p.getByRole('button', { name: 'Check the lab' }).click();
+
+  await go('l/sql-final');
+  await p.getByTestId('tool-sqlreport').waitFor();
+  await p.locator('#rep-q-r1').fill('SELECT adress FROM homes');
+  await p.getByTestId('rep-r1').getByRole('button', { name: 'Run and check' }).click();
+  await p.getByTestId('rep-r1').locator('.fbline').first().waitFor({ timeout: 8000 });
+  check('SQL: error explained in plain language', (await p.getByTestId('rep-r1').innerText()).includes('There is no column called "adress"'));
+  await p.locator('#rep-q-r1').fill('DELETE FROM homes');
+  await p.getByTestId('rep-r1').getByRole('button', { name: 'Run and check' }).click();
+  await p.waitForTimeout(300);
+  check('SQL: practice database is protected from writes', (await p.getByTestId('rep-r1').innerText()).includes('The practice database is protected'));
+  await p.locator('#rep-q-r1').fill(REPORT_TASKS[0].reference);
+  const ssql = await dlText('Download .sql');
+  check('SQL: .sql file downloads with all five queries', ssql.file.endsWith('.sql') && (ssql.text.match(/;$/gm) ?? []).length === 5 && /checked: passed/.test(ssql.text), ssql.file);
+  const smd = await dlText('Download report .md');
+  check('SQL: .md report holds real results', /Checked: 5 of 5 queries passed/.test(smd.text) && /\| Hillcrest \| 1 \| 560000 \|/.test(smd.text));
+  await p.getByRole('button', { name: 'Check the lab' }).click();
+
+  await go('l/gis-final');
+  await p.getByTestId('tool-geojson').waitFor();
+  await p.getByRole('button', { name: 'Reset to the practice file' }).click();
+  await p.getByRole('button', { name: 'Run the audit' }).click();
+  check('GeoJSON: map preview drawn', (await p.locator('.geomap svg circle').count()) >= 2);
+  check('GeoJSON: ambiguous swap is only a warning', (await p.getByText('Possibly swapped (not certain)').count()) === 1);
+  const before = await p.locator('.tool textarea').first().inputValue();
+  const certainBtn = p.getByRole('button', { name: /Swap certain cases/ });
+  check('GeoJSON: no auto-swap offered when no swap is certain', (await certainBtn.count()) === 0);
+  check('GeoJSON: nothing changed silently', (await p.locator('.tool textarea').first().inputValue()) === before);
+  const gj = await dlText('Download report .json');
+  check('GeoJSON: report .json downloads', JSON.parse(gj.text).findings.length >= 6);
+  await p.locator('.tool textarea').first().fill(GEO_FIXED);
+  const gg = await dlText('Download .geojson');
+  check('GeoJSON: corrected .geojson downloads', JSON.parse(gg.text).features.length === 7);
+  await p.getByRole('button', { name: 'Check the lab' }).click();
+
+  await go('l/web-final');
+  await p.getByTestId('tool-web').waitFor();
+  await p.getByRole('button', { name: 'Reset to the practice file' }).click();
+  await p.getByRole('button', { name: 'Run the audit' }).click();
+  check('Web: preview iframe is sandboxed with no permissions', (await p.locator('iframe.webpreview').getAttribute('sandbox')) === '');
+  check('Web: contrast computed with WCAG formula', (await p.getByText('(2.85:1)').count()) === 1);
+  check('Web: honest scope statement shown', (await p.getByText('does NOT prove the page is safe').count()) > 0);
+  const wmd = await dlText('Download audit .md');
+  check('Web: audit .md downloads', /Security findings: 4/.test(wmd.text) && /Accessibility findings: 7/.test(wmd.text), wmd.text.slice(0, 300));
+  await p.locator('.tool textarea').first().fill(HTML_FIXED);
+  await p.getByRole('button', { name: 'Check the lab' }).click();
+  check('Web: fixed page passes', (await status(p)).startsWith('Passed'));
+
+  await go('c/dq');
+  await p.getByText(/Glossary \(\d+ terms\)/).click();
+  check('course page: glossary opens with terms', (await p.locator('.glossary dt').count()) >= 4);
 
   // ---------- course 3 (original assistant course) ----------
   const quiz = async (mod: (typeof MODULES)[number]) => {
@@ -173,7 +254,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   // ---------- dashboard, reload ----------
   await go('dashboard');
   const tiles = async () => (await p.locator('.tiles .tile b').allTextContents()).join(',');
-  const all = '4 / 4,4 / 4,5 / 5,4 / 4,4 / 4,4 / 4,4 / 4,4 / 4';
+  const all = '5 / 5,5 / 5,5 / 5,5 / 5,6 / 6,6 / 6,6 / 6,6 / 6';
   check('dashboard: every course complete', (await tiles()) === all, await tiles());
   check('learning history recorded', (await p.locator('table.results tbody tr').count()) >= 30);
   await p.reload(); await p.waitForTimeout(200);
@@ -187,7 +268,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   const backupPath = (await bk.path())!;
   await p.getByRole('button', { name: 'Reset all progress' }).click();
   await p.getByRole('button', { name: 'Delete everything' }).click();
-  check('reset clears progress', (await tiles()).startsWith('0 / 4'), await tiles());
+  check('reset clears progress', (await tiles()).startsWith('0 / 5'), await tiles());
   await p.locator('label.filebtn input[type=file]').setInputFiles(backupPath);
   await p.waitForTimeout(300);
   check('backup restores progress', (await tiles()) === all, await tiles());
@@ -200,7 +281,7 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   const englishUi = ['Check answers', 'Sources & further reading', 'Run tests', 'Lesson passed', 'Dashboard', 'Courses', 'Your SQL query', 'Run on practice data'];
   const body = await p.locator('body').innerText();
   check('no untranslated UI labels on a Russian lesson page', englishUi.every((s) => !body.includes(s)), englishUi.filter((s) => body.includes(s)).join(', '));
-  for (const h of ['home', 'courses', 'dashboard', 'about', 'search', 'm2', 'project', 'l/agents-2', 'l/dq-4', 'l/web-4']) {
+  for (const h of ['home', 'courses', 'dashboard', 'about', 'search', 'm2', 'project', 'l/agents-2', 'l/dq-4', 'l/web-4', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'c/gis']) {
     await go(h);
     const txt = await p.locator('body').innerText();
     const leaks = ['Check answers', 'Run tests', 'Learning history', 'Knowledge check', 'Final project', 'Lesson ', 'Try again', 'Open course'].filter((s) => txt.includes(s));
@@ -236,8 +317,9 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
 
   // ---------- accessibility (axe-core) ----------
   const axeSrc = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
-  for (const h of ['home', 'courses', 'c/sql', 'l/fund-2', 'l/agents-2', 'l/sql-3', 'l/gis-4', 'l/prompt-4', 'l/dq-4', 'm3', 'project', 'dashboard', 'search', 'about']) {
+  for (const h of ['home', 'courses', 'c/sql', 'l/fund-2', 'l/agents-2', 'l/sql-3', 'l/gis-4', 'l/prompt-4', 'l/dq-4', 'l/dq-w', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'm3', 'project', 'dashboard', 'search', 'about']) {
     await p.goto(BASE + '#' + h); await p.waitForTimeout(150);
+    if (/-final$/.test(h)) await p.locator('.tool').waitFor({ timeout: 8000 });
     await p.addScriptTag({ content: axeSrc });
     const v = await p.evaluate(async () => {
       const r = await (window as unknown as { axe: { run: (o: object) => Promise<{ violations: { id: string; impact: string; nodes: unknown[] }[] }> } }).axe.run({ resultTypes: ['violations'] });
@@ -249,8 +331,9 @@ async function answerLesson(p: Page, id: string, mode: 'right' | 'wrong'): Promi
   // ---------- mobile 390 px ----------
   const m = await b.newPage({ viewport: { width: 390, height: 844 } });
   m.on('pageerror', (e) => errs.push('mobile ' + e.message));
-  for (const h of ['home', 'courses', 'l/sql-2', 'l/gis-4', 'l/dq-4', 'l/agents-2', 'm3', 'project', 'dashboard', 'about']) {
+  for (const h of ['home', 'courses', 'l/sql-2', 'l/gis-4', 'l/dq-4', 'l/agents-2', 'l/dq-final', 'l/sql-final', 'l/gis-final', 'l/web-final', 'c/web', 'm3', 'project', 'dashboard', 'about']) {
     await m.goto(BASE + '#' + h); await m.waitForTimeout(150);
+    if (/-final$/.test(h)) await m.locator('.tool').waitFor({ timeout: 8000 });
     const sw = await m.evaluate(() => document.documentElement.scrollWidth);
     check(`mobile 390px #${h}: no horizontal scroll`, sw <= 390, String(sw));
   }
