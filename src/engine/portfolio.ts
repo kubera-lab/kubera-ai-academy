@@ -1,6 +1,6 @@
 // Portfolio export: a Markdown record of what the learner actually did, with honest limits.
 import { COURSES } from '../content/catalog.ts';
-import { CONTENT_VERSION, tx, type Lang } from '../content/types.ts';
+import { tx, type Lang } from '../content/types.ts';
 import { lessonPassed, type AppState } from '../state.ts';
 
 export interface CourseSummary {
@@ -25,7 +25,7 @@ export function buildPortfolio(s: AppState, lang: Lang, legacy: { passed: number
   const lines: string[] = [];
   lines.push(`# KUBERA AI Academy — ${L('learning record', 'учебный отчёт')}`);
   lines.push('');
-  lines.push(`${L('Generated', 'Создан')}: ${when.toISOString().slice(0, 10)} · ${L('content version', 'версия контента')} ${CONTENT_VERSION}`);
+  lines.push(`${L('Generated', 'Создан')}: ${when.toISOString().slice(0, 10)} · ${L('content version', 'версия контента')} 1.0.0`);
   lines.push('');
   lines.push(L(
     'This record lists exercises graded automatically in the browser by fixed rules. It is not a certificate and was not issued or checked by a person.',
@@ -56,19 +56,6 @@ export function buildPortfolio(s: AppState, lang: Lang, legacy: { passed: number
         lines.push('```');
         lines.push('');
       }
-      if (ok && l.exercise.kind === 'tool') {
-        if (l.exercise.tool === 'sqlreport') {
-          const a = (p.answer ?? {}) as { title?: string; queries?: Record<string, string> };
-          lines.push('');
-          lines.push('```sql');
-          lines.push(`-- ${a.title ?? 'SQL report'}`);
-          for (const [id, q] of Object.entries(a.queries ?? {})) lines.push(`-- ${id}`, String(q).trim().replace(/;?$/, ';'));
-          lines.push('```');
-          lines.push('');
-        } else {
-          lines.push(`  - ${L('Final project: the practice file was fixed until every lab check passed; the tool\'s report and fixed file are downloaded separately.', 'Итоговый проект: учебный файл исправлен до прохождения всех проверок; отчёт и исправленный файл скачиваются отдельно.')}`);
-        }
-      }
     }
   }
   lines.push('');
@@ -76,7 +63,6 @@ export function buildPortfolio(s: AppState, lang: Lang, legacy: { passed: number
   lines.push(`- ${L('Multiple choice and labelling: fixed answer keys.', 'Тесты и разметка: фиксированные ключи ответов.')}`);
   lines.push(`- ${L('JavaScript labs: the code was executed in a browser Web Worker against visible and hidden tests.', 'Лаборатории JavaScript: код выполнялся в Web Worker браузера на видимых и скрытых тестах.')}`);
   lines.push(`- ${L('SQL labs: queries ran in SQLite (sql.js) on a visible and a hidden dataset.', 'SQL-лаборатории: запросы выполнялись в SQLite (sql.js) на видимом и скрытом наборе данных.')}`);
-  lines.push(`- ${L('Final-project tools (courses 5–8): fixed rules check the practice file; deleting broken records does not count as a fix.', 'Инструменты итоговых проектов (курсы 5–8): фиксированные правила проверяют учебный файл; удаление сломанных записей исправлением не считается.')}`);
   lines.push(`- ${L('Written evidence: checked for length, real words and a named field; meaning is not fully understood by the checker.', 'Письменные обоснования: проверяются длина, настоящие слова и названное поле; полностью смысл проверка не понимает.')}`);
   lines.push('');
   lines.push(`## ${L('Limitations', 'Ограничения')}`);

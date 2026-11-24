@@ -20,36 +20,16 @@ import { MODULES } from './course.ts';
 
 const lessonsOf = (kind: string) => ALL_LESSONS.filter((l) => l.exercise.kind === kind);
 
-test('catalogue: 8 courses; each generic course has lessons, a warm-up and a lab; courses 5–8 end with a final tool', () => {
+test('catalogue: 8 courses, 7 with 4 lessons each plus the original assistant course', () => {
   assert.equal(COURSES.length, 8);
   assert.deepEqual(COURSES.map((c) => c.n), [1, 2, 3, 4, 5, 6, 7, 8]);
   for (const c of COURSES.filter((x) => !x.legacy)) {
-    const tools = c.lessons.filter((l) => l.exercise.kind === 'tool');
-    const warm = c.lessons.filter((l) => l.exercise.kind === 'choice' && l.exercise.warmup);
-    assert.equal(warm.length, 1, c.id + ' has one warm-up');
-    const iw = c.lessons.indexOf(warm[0]);
-    const firstLab = c.lessons.findIndex((l) => l.lab);
-    assert.ok(iw >= 0 && iw < firstLab, c.id + ' warm-up comes before the lab');
-    if (c.n >= 5) {
-      assert.equal(c.lessons.length, 6, c.id);
-      assert.equal(tools.length, 1, c.id + ' has a final tool');
-      assert.equal(c.lessons[c.lessons.length - 1].exercise.kind, 'tool', c.id + ' final tool is last');
-    } else {
-      assert.equal(c.lessons.length, 5, c.id);
-      assert.equal(tools.length, 0, c.id);
-    }
+    assert.equal(c.lessons.length, 4, c.id);
+    assert.equal(c.lessons.filter((l) => l.lab).length, 1, c.id + ' has exactly one lab');
   }
-  assert.deepEqual(COURSES.filter((c) => c.n >= 5).map((c) => { const e = c.lessons[c.lessons.length - 1].exercise; return e.kind === 'tool' ? e.tool : ''; }), ['csv', 'sqlreport', 'geojson', 'web']);
-  assert.equal(ALL_LESSONS.length, 39);
-  assert.equal(new Set(ALL_LESSONS.map((l) => l.id)).size, 39, 'lesson ids unique');
-  assert.equal(CONTENT_VERSION, '1.1.0');
-});
-
-test('every course has a bilingual glossary for beginners', () => {
-  for (const c of COURSES) {
-    assert.ok((c.glossary?.length ?? 0) >= 4, c.id + ' glossary');
-    for (const g of c.glossary!) assert.ok(g.term.en && g.term.ru && g.def.en && g.def.ru, c.id + ' ' + g.term.en);
-  }
+  assert.equal(ALL_LESSONS.length, 28);
+  assert.equal(new Set(ALL_LESSONS.map((l) => l.id)).size, 28, 'lesson ids unique');
+  assert.equal(CONTENT_VERSION, '1.0.0');
 });
 
 test('every lesson has an explanation, example, verified sources and both languages', () => {
