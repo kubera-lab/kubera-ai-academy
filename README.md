@@ -17,20 +17,7 @@ Free, self-paced AI courses for adult beginners. Every lesson ends with a task t
 | 7 | GIS and Official Open Data | 4 | Nearest-place finder with haversine distance |
 | 8 | AI-Assisted Web Development | 4 | Listing filter for a small app |
 
-44 learning units in total (39 lessons + 5 modules), plus the course 3 final project.
-
-### New in v1.1 — beginner standard and four final-project tools
-
-Every course now has a bilingual **glossary** (EN/RU) for absolute beginners and a **warm-up** before the lab that explains each answer straight away. Courses 5–8 end with a real working tool:
-
-| Course | Final-project tool | What it really does | Exports |
-|---|---|---|---|
-| 5 | **CSV Data Quality Auditor** | Parses CSV (quotes, commas, CRLF), checks required fields, duplicates, calendar dates, numbers, UK postcodes and conflicts between sources; shows line, record, column, value and fix; deterministic score | report `.md`, `.json`, fixed `.csv` |
-| 6 | **SQL Report Builder** | Five queries (SELECT, WHERE, JOIN, GROUP BY, aggregate) on three related tables in real SQLite (sql.js); visible + hidden dataset; plain-language SQL errors; read-only practice database | `.sql`, report `.md` with real results |
-| 7 | **GeoJSON Coordinate Validator** | RFC 7946 structure, ranges, NaN/text/missing values, lines and closed rings; certain lat/lon swaps can be fixed by a button, ambiguous ones are warnings only; map preview | `.geojson`, report `.json`, `.md` |
-| 8 | **Web Quality Inspector** | Common XSS risks (inline scripts and handlers, `javascript:` URLs, unsandboxed iframes, `target=_blank` without `noopener`) and accessibility basics (lang, headings, alt, labels, names, WCAG 2.x contrast for inline colours); preview in a sandboxed iframe with scripts removed | audit `.md`, `.json`, fixed `.html` |
-
-Each tool also works on the learner's own file (opened locally; nothing is uploaded). The lab check applies only to the practice file, and deleting a broken record never counts as fixing it. The tools load lazily as separate bundles.
+33 learning units in total (28 lessons + 5 modules), plus the course 3 final project.
 
 Platform features: course catalogue, interactive lessons, labs, knowledge checks, project builder, test runner, progress tracking, learning history, search, portfolio export (Markdown), progress backup/restore (JSON), English and Russian interface.
 
@@ -63,10 +50,8 @@ npx vite preview --port 4173 &  npm run e2e   # Playwright end-to-end tests agai
 ## Project structure
 
 ```
-src/content/        course content (data only), extras.ts (glossaries, warm-ups, final tools), sources and research register
+src/content/        course content (data only), sources and research register
 src/engine/         deterministic graders: grade.ts, lint.ts, assistant.ts, testing.ts, project.ts, portfolio.ts
-src/engine/tools/   course 5–8 tools: csv.ts, sqlreport.ts, geojson.ts, web.ts (pure, unit-tested)
-src/ui/tools/       lazily loaded tool screens
 src/runtime/        sql.js loader and Web Worker code runner
 src/ui/, src/pages/ React components
 src/i18n/           en.ts and ru.ts (a test fails if a Russian key is missing)
@@ -85,6 +70,3 @@ Each lesson lists its sources with the date they were checked (2026-11-16) and t
 - Checkers use fixed rules; they cannot fully understand meaning.
 - The course 3 practice assistants and the prompt checker work in English.
 - Example organisations, addresses, UPRNs and prices are fictional or synthetic.
-- The Web Quality Inspector checks a fixed list of rules with a lightweight HTML reader; it cannot prove a page is safe from XSS or WCAG-conformant, and contrast is checked only for inline colours.
-- The GeoJSON Validator warns about positions outside the UK; it does not know the true location of a place, so possible swaps must be decided from a source.
-- The SQL lab checks are kept for the current page session; after a reload run the queries again to see their status (passes are stored).

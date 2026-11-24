@@ -7,7 +7,6 @@ import { DATAQUALITY } from './courses/dataquality.ts';
 import { SQL } from './courses/sql.ts';
 import { GIS } from './courses/gis.ts';
 import { WEBDEV } from './courses/webdev.ts';
-import { withExtras } from './extras.ts';
 
 const l = (en: string, ru: string) => ({ en, ru });
 
@@ -23,7 +22,7 @@ export const ASSISTANT: Course = {
   lessons: [],
 };
 
-export const COURSES: Course[] = [FUNDAMENTALS, PROMPTING, ASSISTANT, AGENTS, DATAQUALITY, SQL, GIS, WEBDEV].map(withExtras);
+export const COURSES: Course[] = [FUNDAMENTALS, PROMPTING, ASSISTANT, AGENTS, DATAQUALITY, SQL, GIS, WEBDEV];
 
 export const ALL_LESSONS: (Lesson & { courseId: string })[] = COURSES.flatMap((c) => c.lessons.map((ls) => ({ ...ls, courseId: c.id })));
 
